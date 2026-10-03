@@ -1,0 +1,67 @@
+{
+  "checked_date": "2026-10-03",
+  "source": "Helldivers Wiki (wiki.gg), search-indexed page content; direct page opens returned HTTP 403",
+  "purpose": "Reference for capacity cross-checks, not a replacement for runtime remaining-ammo reads",
+  "upgrade": "Shock Absorption Gel",
+  "upgrade_source": "https://helldivers.wiki.gg/wiki/Shock_Absorption_Gel",
+  "entries": [
+    {
+      "type": "37CDE43876BA26BB",
+      "name": "MACHINE GUN",
+      "standard": 175,
+      "upgraded": 263,
+      "url": "https://helldivers.wiki.gg/wiki/A/MG-43_Machine_Gun_Sentry",
+      "live_note": "Observed after firing; not a pristine full-capacity observation."
+    },
+    {
+      "type": "EF85D6CF58E31D70",
+      "name": "GATLING",
+      "standard": 500,
+      "upgraded": 750,
+      "url": "https://helldivers.wiki.gg/zh/wiki/A/G-16_Gatling_Sentry?variant=zh-tw",
+      "live_note": "Captured 750 remaining, consistent with upgraded capacity."
+    },
+    {
+      "type": "54D86057F5DACFB9",
+      "name": "AUTOCANNON",
+      "standard": 24,
+      "upgraded": 36,
+      "url": "https://helldivers.wiki.gg/wiki/Autocannon_Sentry",
+      "live_note": "Captured 36 remaining, then 35, 34, 33."
+    },
+    {
+      "type": "37079568DC86E9C6",
+      "name": "ROCKET",
+      "standard": 32,
+      "upgraded": 40,
+      "standard_pods": [
+        16,
+        16
+      ],
+      "upgraded_pods": [
+        24,
+        16
+      ],
+      "url": "https://helldivers.wiki.gg/wiki/A/MLS-4X_Rocket_Sentry",
+      "live_note": "Captured 23 then 22 current, reserve magazine count 1. Second-pod capacity has not been observed through a live reload; wiki suggests 16. ui1 retains current + spare-mag display."
+    },
+    {
+      "type": "820CC3BAFE962858",
+      "name": "FLAME",
+      "standard": 600,
+      "upgraded": 900,
+      "url": "https://helldivers.wiki.gg/wiki/A/Flam-40_Flame_Sentry",
+      "live_note": "Feed not yet live verified."
+    },
+    {
+      "type": "299C0D3DFD2F0994",
+      "name": "GAS MORTAR",
+      "standard": 15,
+      "upgraded": 23,
+      "detailed_capacity_on_same_page": 16,
+      "url": "https://helldivers.wiki.gg/wiki/A/GM-17_Gas_Mortar_Sentry",
+      "live_note": "Wiki summary and detailed capacity differ. Do not hardcode before live chamber semantics validation."
+    }
+  ],
+  "runtime_changed": false
+}

@@ -1,0 +1,8 @@
+anchor_player=1
+panel_gap=12
+# x and y apply only with anchor_player=0 (manual position).
+x=540
+y=48
+scale=1
+max_rows=6
+poll_interval=0.125

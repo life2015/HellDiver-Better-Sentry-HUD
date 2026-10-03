@@ -1,0 +1,69 @@
+Historical offline notes. Superseded by LIVE_FINDINGS.txt after the live session.
+
+Sentry HUD — offline findings, 2026-10-03
+
+Confirmed scope: autonomous sentries only; no manned emplacements. Display next
+ to the local player's lower-left status, on its right. Multiple rows supported.
+
+Inputs and build
+- Windows at qq976@192.168.0.105 was not running the game when inspected.
+- Read-only module SHA-256 checks match build 25480438 (see dependencies.json).
+- Local ScannerRecharge3s/artifacts/game.dll has the same SHA-256 but its code is
+  packed. Its retained game-from-dump.bin contains only the data ranges listed in
+  game-from-dump-ranges.json, not unpacked .text. Do not treat zero code as proof.
+- SentryAimRetention targets older build 24826606: its manager RVAs (0x276....)
+  and weapon stride 992 cannot be copied into this build (HUD+ has stride 1008).
+  Only reviewed resource identities serve as current catalog candidates.
+
+Known current-build layouts (reference sources retained elsewhere in workspace)
+1. HD2Runtime 96ab2d2 runtime/event_world.lua and domains/event_natives.lua:
+   health global 0x3326688; header 0x1010 (88 bytes), live +0x1020,
+   descriptors +0x1048, record array +0x1058, extended array +0x1060.
+   Health stride 440, signed current HP +20, life +412; extended stride 28,
+   maximum HP +20. Descriptor: type u64 +0, entity +8, unit +12, network ID +16.
+   Local peer: ptr(game+0x347CEF0)+0xB398, compared as all 64 bits.
+2. HD2 HUD+ 0.1.13 catalog constants:
+   WeaponMagazine global 53634632; map +32, descriptor backref +56,
+   network array +80 stride12 (reserve+0, ammo+4), runtime +72 stride16
+   (chamber_round+8).
+   WeaponRounds global 53636336; map +40, backref +64, array +88 stride20
+   (selected+4, rounds0+8, rounds1+12, chamber+16).
+   These layouts are weapon evidence, not proof that every sentry's health entity
+   is its weapon/feed entity. The reader joins matching descriptors only.
+3. HUD font/atlas/material IDs use the same confirmed current-build addresses as
+   Enemy HP HUD+. Native temporary IdString64 values are never cached across frames.
+4. Resource identities cover Gatling, MG, autocannon, rocket, mortar, EMS mortar,
+   gas mortar, flame, laser and Tesla. Entries indicate type candidates, not live
+   support claims for all feed/heat/arc semantics.
+
+Unresolved ownership — deliberate blocker, not an optional heuristic
+- Descriptor flags mean local simulation authority, not the player who summoned.
+  A host may own the simulation of multiple players' sentries.
+- Health.lastCreditor (+0x38) means attacker of the sentry. It is NOT its summoner.
+- HD2Runtime scripts/research_event_actions.py traces FireProjectile at 0x13A9700
+  setting EDX=source entity and calling game+0x129C690 (credited-peer lookup).
+  Its body and originating spawn/credit assignment must be decoded. The caller
+  alone does not establish a safe native getter ABI or permanent summoner identity.
+- No guessed offset, nearby-player heuristic or unverified native call is enabled.
+  src/ownership.lua explicitly returns verified=false. The pure model filters
+  unresolved/foreign owners. Packaged archive is labelled OFFLINE PROTOTYPE.
+
+Completed independent work
+- Separate source/build/tests/manifest/resource path and unique GUID; no files in
+  EnemyHPHud modified, no Windows deployment.
+- Pure model, bounded/read-only health and feed adapter, retained native UI,
+  config parsing, controller, BSL v15 discovery and archive packaging.
+- Synthetic byte tests + actual renderer geometry + menu/world/read-gap handling.
+  Lua 5.1 and original BSL v15 discovery pass. No real firing/summoner proof yet.
+- Actual draw-call SVG preview uses simulated HP/ammo; not a gameplay screenshot.
+
+Next read-only session when the user is available
+1. Capture unpacked game.dll text/rdata (only this module), prove the creator chain
+   from spawn/credit assignment and its 64-bit local peer match; implement adapter.
+2. Observe one local MG/Gatling's health descriptor and matching feed, idle ->
+   firing -> ammo depletion; verify HP loss and real maximum with ship upgrades.
+3. Observe a teammate's same-type sentry to exclude it (host and client cases).
+4. Verify mounting relationships and alternate feed for autocannon/rocket/mortars;
+   laser/arc needs a proven firing signal and an appropriate heat/charge display.
+5. Enable verified ownership only after proof, package a playable test build,
+   then align HUD to actual player panel and check game exit behavior.

@@ -1,0 +1,21 @@
+本项目由当前工作区独立建立，渲染基础复用本工作区 EnemyHPHud 的 presentation.lua。
+保留其 HUD+ 视觉参考和临时 IdString64 生命周期处理；未打包 Enemy HP 的目标/伤害读取。
+
+HD2 HUD+ 0.1.13 — DDRK1NG
+https://www.nexusmods.com/helldivers2/mods/15298
+参考原生字体/材质绑定方法、颜色与屏幕基准；弹药组件及 Player Status 控件的布局证据来自其打包源码。
+图标材质基于其 non-curved cell_integrated_reserve_icon 定义，改用本项目独立资源路径。
+原 README 允许在注明作者及链接后复用和修改。不附带 HUD+ 的资源包和核心脚本。
+
+HD2Runtime — SkyeShade
+https://github.com/SkyeShade/HD2Runtime/tree/96ab2d258d867a5df4f22bb7b3321d84d28de21d
+健康/本地玩家布局、哨戒炮资源标识参考其当前构建的研究。
+不包含其运行时，不要求安装 HD2Runtime。
+
+Bingus Shared Loader — CowboyBingus
+https://github.com/CowboyBingus/BingusSharedLoader
+v15 / API 1 运行依赖；本项目使用其公开归档格式和资源路径哈希算法。不附带 Loader。
+
+Helldivers 2 — Arrowhead Game Studios / Sony Interactive Entertainment
+炮台图形来自用户安装游戏的 stratagem_icons 矢量资源；保留原生符号和颜色，移除方形底色。
+本包包含 10 种自动炮台图标转换后的专用贴图；不包含完整游戏图标库。

@@ -1,0 +1,107 @@
+{
+  "source": "content/ui/shared/resources/generated_icons/stratagem_icons",
+  "source_sha256": "deda7000592065f14d79d41c5d153ec1041fff7a58d6a607def232add7702eae",
+  "texture": "mods/retrox/sentry_hud/icons_atlas",
+  "material": "mods/retrox/sentry_hud/icons_material",
+  "texture_hash": "17449bc4467b3462",
+  "material_hash": "7662b9e469b07989",
+  "size": [
+    512,
+    512
+  ],
+  "mips": 10,
+  "cells": {
+    "EF85D6CF58E31D70": {
+      "key": "StratagemTurretsGatling",
+      "uv": [
+        0.015625,
+        0.015625,
+        0.234375,
+        0.234375
+      ]
+    },
+    "37CDE43876BA26BB": {
+      "key": "StratagemTurretsMachinegun",
+      "uv": [
+        0.265625,
+        0.015625,
+        0.484375,
+        0.234375
+      ]
+    },
+    "54D86057F5DACFB9": {
+      "key": "StratagemTurretsAutocannon",
+      "uv": [
+        0.515625,
+        0.015625,
+        0.734375,
+        0.234375
+      ]
+    },
+    "37079568DC86E9C6": {
+      "key": "StratagemTurretsRocket",
+      "uv": [
+        0.765625,
+        0.015625,
+        0.984375,
+        0.234375
+      ]
+    },
+    "51A0812E3BCE2D74": {
+      "key": "StratagemTurretsMortar",
+      "uv": [
+        0.015625,
+        0.265625,
+        0.234375,
+        0.484375
+      ]
+    },
+    "B2053A1838092F8B": {
+      "key": "StratagemTurretsMortarStaticfield",
+      "uv": [
+        0.265625,
+        0.265625,
+        0.484375,
+        0.484375
+      ]
+    },
+    "299C0D3DFD2F0994": {
+      "key": "StratagemTurretsGassentry",
+      "uv": [
+        0.515625,
+        0.265625,
+        0.734375,
+        0.484375
+      ]
+    },
+    "820CC3BAFE962858": {
+      "key": "StratagemTurretFlamethrower",
+      "uv": [
+        0.765625,
+        0.265625,
+        0.984375,
+        0.484375
+      ]
+    },
+    "56070F36CFFFA8A8": {
+      "key": "StratagemTurretLaserCannon",
+      "uv": [
+        0.015625,
+        0.515625,
+        0.234375,
+        0.734375
+      ]
+    },
+    "74599E56F72F9D7E": {
+      "key": "StratagemEmplacementsTeslatower",
+      "uv": [
+        0.265625,
+        0.515625,
+        0.484375,
+        0.734375
+      ]
+    }
+  },
+  "artwork": "Helldivers 2 / Arrowhead Game Studios; native sentry symbols, square background removed",
+  "material_basis": "HD2 HUD+ 0.1.13 by DDRK1NG, cell_integrated_reserve_icon (non-curved)"
+}

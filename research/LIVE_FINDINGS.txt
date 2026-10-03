@@ -1,0 +1,187 @@
+Sentry HUD — live findings, 2026-10-03
+
+Target: Steam build 25480438, hashes and PE guards in dependencies.json/windows.lua.
+All remote inspection used ReadProcessMemory with PROCESS_VM_READ. No injection,
+remote function invocation, or memory writes. Snapshots are ignored build data.
+
+Verified in this session
+- User confirmed their MG, Gatling, Rocket and Autocannon sentries.
+- 12 complete live snapshots replayed through the shipping Lua reader, ownership
+  resolver and model. Each snapshot included all four sentries with a full peer
+  match. Health 600/600; ammo initially MG179, Gatling750, Rocket23 +1 magazine,
+  Autocannon36. Rocket decreased to22; Autocannon decreased to33. Both trigger
+  FIRING in the real model. Health slot reordering does not reorder HUD cards.
+- Previous captures showed MG and Gatling consumption too, but the earlier capture
+  logger overwrote some larger reads with smaller reads at the same address;
+  these partial snapshots are not claimed as full-reader regression coverage.
+- No real HUD rendering has yet been verified. No teammate or host-migration trial.
+
+Ownership: match the current network game-object owner, never simulation authority
+- game+0x129C690 is the credited-peer lookup used by projectile damage. Its network
+  owner path leads to executable+0x34CEE0 and virtual executable+0x29AEA0.
+- Read object = ptr(ptr(exe+0x1A10278)+0xA8). Vtable+0x178 must equal exe+0x29AEA0;
+  pin its first19 bytes and both module builds before interpreting the layout.
+- Object+0x640 allocated entries; +0x648 record array; +0x658 live count;
+  +0x65C hash bucket count. Collision storage extends beyond the bucket count.
+- Hash h=mul32(goid,0x5BD1E995); h^=h>>24; h=mul32(h,0x5BD1E995);
+  initial slot=h%bucket_count. Record stride0x248; GOID+0; owner u64+0x10;
+  collision next+0x240. 0xFFFFFFFE empty, 0x7FFFFFFF end. Bound and detect cycles.
+- This is the current network owner, not evidence of immutable original summoner
+  identity across migration/transfer. This limitation is explicit in README.
+
+Ammo
+- All four sentry health descriptors join their own WeaponMagazine entity, with a
+  descriptor back-reference check. Manager game+53634632; map+32/backref+56.
+- Network array+80, stride12: reserve magazine count+0, current magazine+4.
+  Runtime array+72, stride16: chamber_round+8 is a projectile TYPE, not a count!
+- Entity settings override hash+96 / array+160 stride160. Otherwise native getter
+  game+0x4F3740 uses type registry ptr(ptr(game+0x346BF98)+0xF124A0).
+  The inspected HUD+ offset0xF125A0 is not valid here; current native code and all
+  four live type lookups prove0xF124A0. 540 slots, stride16, full64 type modulo540,
+  linear probing, row index+8; settings at registry+8640+index*160.
+- Settings u32+136 base capacity, byte+156 chambered boolean. HUD ammo equals live
+  magazine count plus1 if chambered and chamber_round nonzero. Do not add242/148
+  projectile IDs. Ship upgrades exceed base capacity: live Gatling750 vs base500.
+- Rocket spare magazine kept separate; do not estimate total using base capacity.
+- No validated WeaponRounds sentry feed; do not sum its selector/round-type fields.
+
+Implementation and boundaries
+- New standalone resource mods/retrox/sentry_hud, unique manifest GUID, BSL v15.
+- Bounded read-only reads, descriptor/component/session guards, full64 peer match.
+- Missing feed stays unknown; read inconsistency hides rows until next good poll.
+- Synthetic tests cover collision overflow, peers differing only in upper32 bits,
+  empty/cyclic/invalid maps, slot identity changes, partial reads, override/fallback
+  magazine settings, projectile-ID semantics, filtering, refill/firing and GUI.
+- Lua 5.1 syntax and exact BSL v15 discovery pass. Retained font native IDs are
+  resolved immediately per native call. Shutdown abandons references only.
+- Remaining: actual game placement/rendering, teammate exclusion, host/client and
+  migration, damage/max-HP changes, reload behavior, other sentry feeds/heat/arc.
+
+Wiki cross-check (2026-10-03; see wiki-ammo-reference.json for URLs)
+- MG175/263, Gatling500/750 and Autocannon24/36 base/upgraded capacity.
+  Gatling750 and Autocannon36 agree with live snapshots. MG was already firing.
+- Rocket is an exception to uniform +50% total: Wiki reports two16-round pods,
+  first upgraded to24, second still16, total32/40. This explains current23 plus
+  one spare magazine. Live reload is still needed to verify second-pod capacity
+  on this exact game build before converting spare-mag count into total shots.
+- Flame600/900. Gas mortar summary15/23 conflicts with detailed capacity16;
+  retain as reference only until live chamber/feed semantics are established.
+- No runtime/package/deployment changes made for this documentation lookup.
+
+First in-game UI feedback and position adjustment (2026-10-03)
+- ui1 loaded and bound its font; user confirms rendered panel but reports overlap
+  with the local player's stim area. Remote game settings are2560x1440.
+- Default x370 was too far left. Set x540 at1920x1080 reference scale, moving
+  approximately227 actual pixels right at2560x1440. y48 and card scale unchanged.
+- Apply through %LOCALAPPDATA%\sentry_hud.cfg; ui1 reads this file on startup.
+  Existing installed archive remains ui1; no live archive replacement required.
+  Source default and config example also updated for the next package build.
+- Exact clearance at x540 still requires user confirmation after restart.
+
+Deployment lifetime — read-only live proof (2026-10-03)
+- Located HellpodPayloadComponent manager game+0x3326560 via native label xrefs.
+  Entity hash+0x28 (standard capacity/empty/multiplier layout), descriptor array
+  +0x40 stride8; total indexed count+0x14; active count+0x18; local count+0x1C.
+- Runtime network array+0x50 stride8: float seconds remaining at+4. Native init
+  game+0x9321F0 reads payload settings getter game+0x5011F0, copies settings+4
+  into that per-instance timer. Native update game+0x9322D0 subtracts frame dt
+  at0x93234D and triggers retraction once positive time crosses zero.
+- Separate float retraction countdown array+0x48 stride4. Idle sentinel=-1.
+  Retraction duration comes from settings+0 (2.5s for MG,3.5s for Gatling).
+  Update decrements this timer and removes the entity when it crosses zero.
+- Native settings (exact-build HD2Runtime defensive-stratagem report): MG,
+  Gatling, Autocannon, Rocket, Tesla, Flame150s; mortars and Laser180s.
+- Live four-snapshot trace captured a complete natural expiry: local MG entity1411
+  remaining1.716765 -> -0.006507; retract-1 ->2.132246 ->0.113639; then entity
+  absent from the health array. HP600/600 while retraction proceeded. Another MG
+  decreased149.097473 ->142.976517; Rocket87.574750 ->81.453636 in the same run.
+- probe_lifetime.ps1 uses PROCESS_VM_READ only, checks current PE build and32
+  bytes of countdown code, bounds entity indices and matches health descriptors.
+  Retained snapshots: ignored build/live-lifetime, not redistributed.
+- This proves runtime remaining duration and expiry/retraction on current local
+  MG, plus active countdown on Rocket. Remote-client timer replication, menu
+  pause behavior, ammo-triggered retraction and every other type need validation.
+- Countdown has NOT been added to the shipping HUD or deployed in this task.
+
+ui2 implementation and replay validation (2026-10-03)
+- User requests English deployment countdown, hiding the card on expiry/retraction.
+- Reader now decodes finite native float32 lifetime/retraction counters, pins the
+  current countdown instructions and checks payload index/descriptor identity.
+- Model excludes remaining<=0 or retraction>=0. It does not render RETRACTING,
+  and expiry does not depend on HP or ammo reaching zero. Missing timers show--.
+- UI adds TIME MM:SS beside a shorter HP bar inside the existing64px card.
+  Display rounds positive fractions upward; default x540 remains.
+- Shipping Lua reader/model/renderer replay4 retained live lifetime snapshots:
+  two expired/retracting observations of the600HP MG are hidden before health
+  removal; other MG and Rocket remain stable and show the captured countdowns.
+- Synthetic tests cover finite float decoding, bad timer signatures, NaN, wrong
+  identity, late discovery, exact zero, positive lifetime with active retraction,
+  timer text rounding, and all prior health/ammo/UI/loader regression checks.
+- Built Sentry HUD0.1.0-ui2-BSL15-test.zip and validated staged Windows upgrade.
+  At preparation, game still running; upgrade pending game exit.
+
+ui2 deployed after user confirmed game exit. Initial File.Replace null-path
+coercion failed without changing ui1; retry used an explicit backup filename.
+Patch5 replaced atomically;17 other family files and position config verified
+unchanged. Successful backup/record: Desktop/SentryHUD-ui2-20261003-r1.
+New countdown game rendering pending user test.
+
+
+ui3 native Player Status anchor (2026-10-03)
+- User reports x540 is too far right. HUD+ 0.1.13's hud_widgets source defines
+  HUD manager at game+0x346D538, embedded mission HUD+0x24E340, self panel+0x60.
+  Weapon widget+0x7B0, health widget+0xB30; no extra pointer dereference.
+  Widget float offsets: size x/y+0x24/+0x28, shown+0x54, screen scale+0x64,
+  screen x/y+0x94/+0x9C. Coordinates already use bottom-left screen pixels.
+- Read-only probe captured two consistent samples from current build/PID9820:
+  weapon x57.6 y136.8 width354 height50 scale1.2 shown1;
+  health x57.6 y76.8 width415 height50 scale1.2 shown1.
+  Thus widest edge=555.6, bottom=76.8 at2560x1440. ui2 fixed x540 generated720,
+  leaving164.4px clearance. These are actual native values, not preview guesses.
+- New hud_anchor.lua reads only these two160-byte widget records plus guarded
+  root reads, on the build accepted by windows.lua. Finite dimensions/scale,
+  matching row scale/x, stable root and on-screen fit are checked. Failures hide.
+- Default anchor_player=1; x=right+12*nativescale, y=bottom, card scale follows
+  native HUD scale times optional mod scale. Current result x570 y77 width295.
+  Existing config x540/y48 remains preserved and is ignored in automatic mode.
+  anchor_player=0 keeps explicit manual coordinates for user preference.
+- Actual Lua reader/renderer replay two captures; tests cover5 resolutions x4
+  HUD scales, wider weapon row, offset changes, mod scaling without moving the
+  anchor, hidden widgets, partial/NaN/Inf data, changed root, transient controller
+  read failure/recovery, and too-small screens without overlap. Lifetime and
+  ownership regression/replay tests pass unchanged.
+- ui3 ZIP staged and upgrade preflight validated at
+  Desktop/SentryHUD-ui3-20261003. Game running; replacement awaits user exit.
+  Game-native reading proven; final in-game visual alignment remains unverified.
+
+ui3 deployed after user confirmed exit. Patch5 replaced atomically;17 other
+family files and existing config unchanged. SHA256 4dcf42688afbb26acdb7c2d000f3f74f11379fcaa5fd14af982ef9150cf797bf
+Backup and record: Desktop/SentryHUD-ui3-20261003. Native anchor defaults
+apply automatically to the preserved ui2 config. In-game visual check pending.
+
+
+ui4 native sentry icons (2026-10-03)
+- Read-only DSAR/DSAA extraction found stratagem_icons XAML in archive007e093ca718ca1a.
+  Raw211327bytes, SHA256deda7000592065f14d79d41c5d153ec1041fff7a58d6a607def232add7702eae
+  matches HD2Runtime's exact-build source identity. No writes to original archives.
+- Ten native type->template mappings now retain original vector shapes/colors;
+  only the dark square background is removed. SVGs, provenance manifest and
+  generated512x512BC3 atlas are in assets/icons; raw full library remains ignored.
+- Material based on HD2 HUD+0.1.13's non-curved integrated icon definition, using
+  independent resource hashes: atlas17449bc4467b3462, material7662b9e469b07989.
+  Atlas has10mips and349552bytes of GPU content, padded to64-byte archive alignment.
+- Source types now pass through the model. Gui.bitmap_uv renders a24px icon at
+  card x10,y38; English name startsx40. Overall246x64card and native anchor unchanged.
+  Handles are retained; unchanged icons skip bitmap update calls. IDs resolve
+  immediately for each native call, never across frames. Removed/unknown types
+  clean up old bitmaps. Lua icon failures keep HP/ammo/countdown text visible.
+- Verified all10distinct mappings, full texture decode, multi-resource bounds,
+  texture/material linkage, BSLv15discovery, retained updates, spacing, scaling,
+  unknown/error fallback, shrinking rows, hidden GUI and engine-owned shutdown.
+  Simulated preview uses real renderer calls and decoded packaged GPU texture.
+- Windows copied-file integration tests: normal install + all3part rollback;
+  forced main-file lock afterGPUreplacement causes automaticGPUrestore; original
+  actual game family inventory verified unchanged during tests.
+- Game/Arsenal were already closed, so ui4 deployed directly. Main/GPU hashes
+  verified and15other-family files plus position config unchanged. Backup/record:
+  Desktop/SentryHUD-ui4-20261003. In-game icon rendering pending user test.

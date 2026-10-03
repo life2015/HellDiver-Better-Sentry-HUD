@@ -1,0 +1,5 @@
+{
+  "runtime": [{"name":"Bingus Shared Loader","minimum_release":15,"api":1,"entry":"mods/retrox/sentry_hud","bundled":false}],
+  "game":{"steam_build":"25480438","version":"1.8.46015.0","game_sha256":"2E2C3B7C2500646DADD5F2B4C6E0504DBB7E7896139F64CDDC0D1813C718F51E","exe_sha256":"F5FEE03DCFDB2E553A4752C283590950AC13316B376D8196AA556FF0400D5F06"},
+  "research":{"hd2runtime_commit":"96ab2d258d867a5df4f22bb7b3321d84d28de21d","hud_plus_version":"0.1.13"}
+}
