@@ -45,7 +45,7 @@ for w,h in [(1280,720),(1920,1080),(2560,1440),(3440,1440),(3840,2160)]:
         bg=ui['gui']['parts'][ui['rects']['1:bg']]
         assert abs(bg['at']['x']-(463+12)*scale)<=0.51
         assert abs(bg['at']['y']-64*scale)<=0.51
-        assert abs(bg['size']['x']-246*scale)<=0.51
+        assert abs(bg['size']['x']-274*scale)<=0.51
         assert bg['at']['x']>anchor['right'] and bg['at']['x']+bg['size']['x']<=w
 # Native HUD movement, independent of resolution and mod scale.
 reset();memory[panel+0xb30]=widget(148,84,415,50,1)
@@ -53,7 +53,7 @@ memory[panel+0x7b0]=widget(148,134,480,50,1) # Weapon wider than health.
 anchor=sample();assert anchor['right']==628 and anchor['bottom']==84
 options['scale']=1.5;ui.draw(ui,rows,options,anchor)
 bg=ui['gui']['parts'][ui['rects']['1:bg']]
-assert bg['at']['x']==640 and bg['at']['y']==84 and bg['size']['x']==369
+assert bg['at']['x']==640 and bg['at']['y']==84 and bg['size']['x']==411
 reset();memory[panel+0xb30]=widget(48,64,415,50,1,0)
 memory[panel+0x7b0]=widget(48,114,354,50,1,0)
 ui.draw(ui,rows,options,sample());assert not ui['visible']
@@ -108,7 +108,7 @@ for path in captures:
     engine['width'],engine['height']=2560,1440;options['scale']=1
     engine.next_frame();ui.draw(ui,rows,options,a)
     bg=ui['gui']['parts'][ui['rects']['1:bg']]
-    assert bg['at']['x']==570 and bg['at']['y']==77 and bg['size']['x']==295
+    assert bg['at']['x']==570 and bg['at']['y']==77 and bg['size']['x']==329
     report.append({'sample':path.name,'player_status_right':a['right'],
                    'player_status_bottom':a['bottom'],'native_scale':a['scale'],
                    'sentry_left':bg['at']['x'],'sentry_bottom':bg['at']['y']})

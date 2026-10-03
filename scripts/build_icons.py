@@ -1,4 +1,4 @@
-"""Convert the 10 native XAML sentry icons into a standalone BC3 GUI atlas.
+"""Convert native sentry icons into ordered, tintable BC3 masks.
 Run after extract_icons.ps1, with Pillow and resvg-py installed. No game writes.
 The regular addon build uses the generated assets, without these dependencies.
 """
@@ -35,9 +35,9 @@ def build():
     tree=ET.fromstring(raw[16:].decode())
     templates={t.attrib.get('{http://schemas.microsoft.com/winfx/2006/xaml}Key'):t for t in tree}
     out=ROOT/'assets/icons';out.mkdir(parents=True,exist_ok=True)
-    atlas=Image.new('RGBA',(512,512));cells={}
+    atlas=Image.new('RGBA',(512,512));masks=Image.new('RGBA',(512,512));cells={};mask_index=0
     for i,(typ,key) in enumerate(NAMES):
-        paths=[]
+        paths=[];groups=[]
         for p in templates[key].iter():
             if p.tag.split('}')[-1]!='Path':continue
             a=p.attrib;fill=a['Fill'];data=a['Data']
@@ -51,27 +51,47 @@ def build():
             assert re.fullmatch(r'[MLHVCSQTAZmlhvcsqtaz\d\s.,+\-Ee]+',data)
             if fill.startswith('#FF'):fill='#'+fill[3:]
             paths.append(f'<path d="{data}" fill="{fill}" fill-rule="{rule}"/>')
+            rgb=(255,255,255) if fill=='white' else tuple(bytes.fromhex(fill[1:]))
+            assert len(rgb)==3
+            # Keep source order: MG has a green base on top of the white gun.
+            # Only consecutive paths of the same color can share one mask.
+            if not groups or groups[-1][0]!=rgb:groups.append((rgb,[]))
+            groups[-1][1].append(f'<path d="{data}" fill="white" fill-rule="{rule}"/>')
         assert paths
         svg='<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">'+''.join(paths)+'</svg>'
         (out/(typ+'.svg')).write_text(svg+'\n')
         icon=Image.open(BytesIO(resvg_py.svg_to_bytes(svg_string=svg,width=112,height=112,skip_system_fonts=True))).convert('RGBA')
         x,y=(i%4)*128+8,(i//4)*128+8
-        atlas.alpha_composite(icon,(x,y));cells[typ]={'key':key,'uv':[x/512,y/512,(x+112)/512,(y+112)/512]}
+        atlas.alpha_composite(icon,(x,y));layers=[]
+        for rgb,group in groups:
+            assert mask_index<25
+            svg_mask='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">'+''.join(group)+'</svg>'
+            mask=Image.open(BytesIO(resvg_py.svg_to_bytes(svg_string=svg_mask,width=88,height=88,skip_system_fonts=True))).convert('RGBA')
+            # Match HUD+'s white-on-transparent-black masks. Store coverage in
+            # RGB and alpha so the artwork color never depends on a texture
+            # channel; the native bitmap tint carries the original color.
+            coverage=mask.getchannel('A');mask_rgb=Image.merge('RGBA',(coverage,)*4)
+            mx,my=(mask_index%5)*96+4,(mask_index//5)*96+4
+            masks.paste(mask_rgb,(mx,my));mask_index+=1
+            layers.append({'uv':[mx/512,my/512,(mx+88)/512,(my+88)/512],'color':list(rgb)})
+        cells[typ]={'key':key,'uv':[x/512,y/512,(x+112)/512,(y+112)/512],'layers':layers}
     atlas.save(out/'atlas.png')
+    masks.save(out/'mask-atlas.png')
     # Keep the reviewed Stingray texture prefix and DX10 BC3 header, with a full
     # mip chain. DDS data is stored in the archive's GPU companion, like HUD+.
     template=ROOT.parent/'EnemyHPHud/unpacked/hud_plus/COMMON/9ba626afa44a3aa3.patch_2'
     header=bytearray((template/'254deec0e6c38888.texture.main').read_bytes())
     assert len(header)==340 and header[192:196]==b'DDS ' and struct.unpack_from('<I',header,320)[0]==77
     for at,value in [(204,512),(208,512),(212,512*512),(220,10)]:struct.pack_into('<I',header,at,value)
-    gpu=bytearray();mip=atlas
+    gpu=bytearray();mip=masks
     while True:
         buffer=BytesIO();mip.save(buffer,format='DDS',pixel_format='DXT5');encoded=buffer.getvalue()
         assert encoded[:4]==b'DDS ' and encoded[84:88]==b'DXT5'
         expected=max(1,(mip.width+3)//4)*max(1,(mip.height+3)//4)*16
         assert len(encoded)==128+expected;gpu+=encoded[128:]
         if mip.size==(1,1):break
-        mip=mip.resize((max(1,mip.width//2),max(1,mip.height//2)),Image.Resampling.LANCZOS)
+        coverage=mip.getchannel('A').resize((max(1,mip.width//2),max(1,mip.height//2)),Image.Resampling.LANCZOS)
+        mip=Image.merge('RGBA',(coverage,)*4)
     # Reuse HUD+'s non-curved icon shader definition under our own resource IDs.
     material=bytearray((template/'1040c4e00c5ab27e.material.main').read_bytes())
     assert hashlib.sha256(material).hexdigest()=='f937fb982c8d53f201f1103f52b1bb04b25c968b73e3c8664aaae5bfb743aa92'
@@ -82,6 +102,7 @@ def build():
     decoded=Image.open(BytesIO(header[192:]+gpu)).convert('RGBA');assert decoded.size==atlas.size
     decoded.save(ROOT/'build/icons-decoded.png')
     doc={'source':'content/ui/shared/resources/generated_icons/stratagem_icons','source_sha256':SOURCE_SHA,
+         'rendering':'ordered alpha masks with per-bitmap native RGB tint; texture RGB is not used for artwork colors',
          'texture':TEXTURE,'material':MATERIAL,'texture_hash':f'{resource_hash(TEXTURE):016x}',
          'material_hash':f'{resource_hash(MATERIAL):016x}','size':[512,512],'mips':10,'cells':cells,
          'artwork':'Helldivers 2 / Arrowhead Game Studios; native sentry symbols, square background removed',
@@ -89,7 +110,11 @@ def build():
     (out/'manifest.json').write_text(json.dumps(doc,indent=2)+'\n')
     lua='-- Generated by scripts/build_icons.py from the current game icon library.\nreturn {\n'
     lua+=f'    material="{doc["material_hash"]}", texture="{doc["texture_hash"]}",\n    cells={{\n'
-    for typ,cell in cells.items():lua+='        ["'+typ+'"]={'+','.join(str(n) for n in cell['uv'])+'},\n'
+    for typ,cell in cells.items():
+        lua+='        ["'+typ+'"]={\n'
+        for layer in cell['layers']:
+            lua+='            {uv={'+','.join(str(n) for n in layer['uv'])+'},color={'+','.join(str(n) for n in layer['color'])+'}},\n'
+        lua+='        },\n'
     (ROOT/'src/icons.lua').write_text(lua+'    },\n}\n')
-    print('Built',len(cells),'native sentry icons;',len(gpu),'GPU bytes')
+    print('Built',len(cells),'native sentry icons;',mask_index,'tinted masks;',len(gpu),'GPU bytes')
 if __name__=='__main__':build()

@@ -94,17 +94,24 @@ return function(sr, font_ids, log, icons)
             local ink=assert(Gui.material(self.gui,I.from_hex(icons.material)),'Icon material unavailable')
             sr.Material.set_texture(ink,I.from_hex('3aa8b87e00000000'),I.from_hex(icons.texture))
             self.icon_bound=true
-            if log then log('Native sentry icon atlas bound') end
+            if log then log('Native sentry icon masks bound; per-layer color tint') end
         end
         x,y,size=round(x),round(y),math.max(1,round(size))
-        local old=self.icon_cache[key]
-        if old and old.type==typ and old.x==x and old.y==y and old.size==size then return true end
-        local lo,hi=V2(cell[1],cell[2]),V2(cell[3],cell[4])
-        local at,dimensions,tint=V3(x,y,952),V2(size,size),Color(255,255,255,255)
-        local id=self.bitmaps[key]
-        if id then Gui.update_bitmap_uv(self.gui,id,I.from_hex(icons.material),lo,hi,at,dimensions,tint)
-        else self.bitmaps[key]=assert(Gui.bitmap_uv(self.gui,I.from_hex(icons.material),lo,hi,at,dimensions,tint)) end
-        self.icon_cache[key]={type=typ,x=x,y=y,size=size}
+        -- This HUD material uses the texture as a monochrome mask. Preserve
+        -- native artwork colors explicitly, including overlapping path order.
+        for index,layer in ipairs(cell) do
+            local slot=key..':'..index
+            local old=self.icon_cache[slot]
+            if not (old and old.type==typ and old.x==x and old.y==y and old.size==size) then
+                local uv,rgb=layer.uv,layer.color
+                local lo,hi=V2(uv[1],uv[2]),V2(uv[3],uv[4])
+                local at,dimensions,tint=V3(x,y,951+index),V2(size,size),Color(255,rgb[1],rgb[2],rgb[3])
+                local id=self.bitmaps[slot]
+                if id then Gui.update_bitmap_uv(self.gui,id,I.from_hex(icons.material),lo,hi,at,dimensions,tint)
+                else self.bitmaps[slot]=assert(Gui.bitmap_uv(self.gui,I.from_hex(icons.material),lo,hi,at,dimensions,tint)) end
+                self.icon_cache[slot]={type=typ,x=x,y=y,size=size}
+            end
+        end
         return true
     end
 
@@ -137,7 +144,7 @@ return function(sr, font_ids, log, icons)
             local front = index == 5
             local c = front and rgb or {20, 23, 24}
             local tint = Color(round(front and alpha or alpha * 0.85), c[1], c[2], c[3])
-            local at = V3(round(x + delta[1]), round(y + delta[2]), front and 954 or 953)
+            local at = V3(round(x + delta[1]), round(y + delta[2]), front and 956 or 955)
             local slot = key .. index
             local id = self.texts[slot]
             if id then Gui.update_text(self.gui, id, value, I.from_hex(self.font_hex), size,
@@ -156,7 +163,7 @@ return function(sr, font_ids, log, icons)
         if not sw or not sh or sw<=0 or sh<=0 then self:hide(); return end
         local anchored=options.anchor_player~=0
         local scale=(anchored and anchor.scale or math.min(sw/1920,sh/1080))*(options.scale or 1)
-        local width=246*scale
+        local width=274*scale
         local x,bottom
         if anchored then
             x=anchor.right+(options.panel_gap or 12)*anchor.scale
@@ -181,31 +188,37 @@ return function(sr, font_ids, log, icons)
             local r=rows[i];local y=bottom+(i-1)*70*scale;local k=tostring(i)..':'
             rect(k..'bg',x,y,width,64*scale,{16,23,25},155)
             rect(k..'edge',x,y,2*scale,64*scale,accent,200)
-            local icon_ok,has_icon=pcall(self.icon,self,k..'icon',r.type,x+10*scale,y+38*scale,24*scale)
+            local icon_ok,has_icon=pcall(self.icon,self,k..'icon',r.type,x+10*scale,y+20*scale,40*scale)
             if not icon_ok then
                 self.icon_failed=true
                 if log then log('Icons unavailable; keeping text HUD: '..tostring(has_icon)) end
                 has_icon=false
             end
-            if has_icon then active_bitmaps[k..'icon']=true end
-            label(k..'name',r.name,x+(has_icon and 40 or 10)*scale,y+44*scale,13*scale,WHITE)
+            if has_icon then
+                for layer=1,#icons.cells[r.type] do active_bitmaps[k..'icon:'..layer]=true end
+            end
+            -- The icon spans the name and HP rows; their text shares a column.
+            local content_x=x+(has_icon and 58 or 10)*scale
+            label(k..'name',r.name,content_x,y+44*scale,13*scale,WHITE)
             local rgb=r.status=='FIRING' and accent or (r.status=='EMPTY' and WARNING or MUTED)
-            label(k..'status',r.status,x+166*scale,y+44*scale,10*scale,rgb)
+            label(k..'status',r.status,x+188*scale,y+44*scale,10*scale,rgb)
             local maxhp=r.max and r.max>0 and r.max or nil
             local hptext='HP '..string.format('%.0f',r.hp)..(maxhp and (' / '..string.format('%.0f',maxhp)) or '')
-            label(k..'hp',hptext,x+10*scale,y+26*scale,12*scale,WHITE)
+            label(k..'hp',hptext,content_x,y+26*scale,12*scale,WHITE)
             local ammo=r.unlimited and 'UNLIMITED' or (r.ammo and string.format('%.0f',r.ammo) or '--')
             if r.reserve and r.reserve>0 then ammo=ammo..' +'..r.reserve..' MAG' end
-            label(k..'ammo','AMMO '..ammo,x+128*scale,y+26*scale,12*scale,WHITE)
+            label(k..'ammo','AMMO '..ammo,x+156*scale,y+26*scale,12*scale,WHITE)
             local duration='--:--'
             if r.remaining then
                 local seconds=math.max(0,math.ceil(r.remaining))
                 duration=string.format('%02d:%02d',math.floor(seconds/60),seconds%60)
             end
-            label(k..'time','TIME '..duration,x+153*scale,y+8*scale,11*scale,MUTED)
-            rect(k..'track',x+10*scale,y+10*scale,126*scale,4*scale,{80,88,86},140)
+            label(k..'time','TIME '..duration,x+181*scale,y+8*scale,11*scale,MUTED)
+            local track_x=x+10*scale
+            local track_width=150*scale
+            rect(k..'track',track_x,y+10*scale,track_width,4*scale,{80,88,86},140)
             local ratio=maxhp and clamp(r.hp/maxhp,0,1) or 0
-            rect(k..'fill',x+10*scale,y+10*scale,126*scale*ratio,4*scale,
+            rect(k..'fill',track_x,y+10*scale,track_width*ratio,4*scale,
                 ratio<0.25 and WARNING or WHITE,225)
         end
         if #rows>count then label('overflow','+'..(#rows-count)..' SENTRIES',x,bottom+count*70*scale,11*scale,MUTED) end

@@ -185,3 +185,58 @@ ui4 native sentry icons (2026-10-03)
 - Game/Arsenal were already closed, so ui4 deployed directly. Main/GPU hashes
   verified and15other-family files plus position config unchanged. Backup/record:
   Desktop/SentryHUD-ui4-20261003. In-game icon rendering pending user test.
+
+ui5 sentry icon colors (2026-10-03)
+- User confirmed ui4 renders the sentry symbols entirely white in game.
+  The source SVGs and packaged DDS retain green/white artwork, but the cloned
+  HUD icon material does not preserve those colors with the white bitmap tint.
+  The old offline preview used texture RGB directly and missed this difference.
+- ui5 uses 22 ordered monochrome masks for the10 symbols, tinted through the
+  actual Gui.bitmap_uv / update_bitmap_uv calls. Consecutive same-color paths
+  share a mask; MG keeps its green/white/green order and EMS its two whites.
+  Coverage is stored in RGB and alpha; colors are original native SVG values.
+  The512x512 BC3 atlas and resource identities remain unchanged in size/identity.
+- Regression tests composite the packaged masks with real Lua draw-call tints,
+  ignoring texture RGB artwork. All10 icons retain green and white at24/32/48px,
+  with max mean channel error2.59/255 against the original colored SVG raster.
+  Red-channel coverage also matches. Retained handles,3-to2 layer transitions,
+  row removal, hidden/unknown recovery and partial-layer failure cleanup pass.
+- ui5 preflight and copied-file Windows upgrade/rollback/failure-restoration
+  tests passed. Game and Arsenal were closed; patch5 main/GPU were replaced.
+  Main SHA256:5e74ac0c3d96170139e3d908451e94f935c33c8ce2a57c321266aba8353e8377
+  GPU SHA256:19976b3d5b528d2590dbff4f0026da5b9d93714b0a89661df631b5bce6350851
+  Other15 family files and user config verified unchanged. Previous ui4 backup
+  and deployment record:Desktop/SentryHUD-ui5-20261003.
+  Final in-game color appearance remains pending user verification.
+
+ui6 two-row icon layout (2026-10-03)
+- User requested larger icons spanning two rows and HP shifted right.
+  Icon is now40 logical pixels at card x10/y20, beside the name and HP rows.
+  Name, HP and health gauge align at x58. Card width is274; ammo moves to x156,
+  state to x188 and TIME to x181 to maintain spacing. Height and row spacing
+  stay64/70, with the same native Player Status anchor and ui5 color masks.
+- Existing Lua/layout/BSL checks passed, including5 resolutions, native HUD
+  scaling and2 live Player Status captures. At the captured2560x1440 geometry,
+  card remains at x570/bottom77; width329 and icon48 screen pixels.
+  Synthetic preview inspected; actual in-game layout awaits user feedback.
+- Windows ui6 preflight passed, game and Arsenal closed. Deployed with ui5
+  backup at Desktop/SentryHUD-ui6-20261003; other15 family files/config unchanged.
+  Main SHA256:c528b9bc18efa0e16d41ba1fefad3cbf84b45c598136e11cab9b562af07e3001
+  GPU is byte-identical to ui5. Local deployment record matches build report.
+
+ui7 layout 02 (2026-10-03)
+- User selected preview02 for deployment: icon remains at x10/y20, size40;
+  health track/fill start at x10 and span150 logical pixels under the icon.
+  Name/HP positions, panel dimensions and all other drawing are unchanged.
+- Compared the complete presentation module with the ui6 source used for the
+  preview plus exactly the preview02 substitutions; byte-for-byte match.
+  Existing Lua, color-mask, scaling, live-anchor replay and BSL/ZIP checks pass.
+- Package and upgrade/rollback scripts staged at Desktop/SentryHUD-ui7-20261003.
+  Windows preflight passed; game is running, waiting for user to exit before
+  replacement. Existing ui6 remains installed at this point.
+  New main SHA256:4be458695c270fd017739f6cbb50f3c16a08c1dda33baee42488d52eb3111112
+  GPU remains byte-identical to ui5/ui6.
+- User confirmed exit; ui7 deployed after installer rechecked closed processes.
+  Previous ui6 backed up at Desktop/SentryHUD-ui7-20261003/backup. All15 other
+  family files and config preserved. Retrieved deployment record matches the
+  local package hashes. In-game layout awaits user feedback.

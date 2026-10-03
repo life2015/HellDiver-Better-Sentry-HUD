@@ -23,7 +23,7 @@ $expectedExisting = @{
     '9ba626afa44a3aa3.patch_2' = '8312b06178ad1e63f0f07444920f5e1f61a69adf1e62770786da09af70337e18'
     '9ba626afa44a3aa3.patch_3' = 'bbf19d5caa43516926243df5dd30e241c0306b23f06bddf4d4e8733bd63ecb71'
     '9ba626afa44a3aa3.patch_4' = 'e8dfa3e2efc4cc28bc4962bdd3949a25c57ee1abbaea1b6f7c8bfc034c09bdad'
-    '9ba626afa44a3aa3.patch_5' = '4dcf42688afbb26acdb7c2d000f3f74f11379fcaa5fd14af982ef9150cf797bf'
+    '9ba626afa44a3aa3.patch_5' = '4be458695c270fd017739f6cbb50f3c16a08c1dda33baee42488d52eb3111112'
 }
 
 if (!$ValidateOnly) { Assert-Closed }
@@ -42,7 +42,9 @@ foreach($item in $existing) {
  if (!$expectedExisting.ContainsKey($item.Name) -or (Get-Sha $item.FullName) -ne $expectedExisting[$item.Name]) { throw ('Existing patch changed: '+$item.Name) }
  foreach($suffix in @('','.stream','.gpu_resources')) {
   $f=Get-Item -LiteralPath ($item.FullName+$suffix)
-  if ($suffix -ne '' -and $f.Length -ne 0) { throw 'Unexpected sidecar data' }
+  if ($item.Name -eq $patchName -and $suffix -eq '.gpu_resources') {
+   if ((Get-Sha $f.FullName) -ne '19976b3d5b528d2590dbff4f0026da5b9d93714b0a89661df631b5bce6350851') { throw 'Existing icon atlas changed' }
+  } elseif ($suffix -ne '' -and $f.Length -ne 0) { throw 'Unexpected sidecar data' }
   $originalFiles += [pscustomobject]@{name=$f.Name;sha256=(Get-Sha $f.FullName);length=$f.Length}
  }
 }
@@ -83,7 +85,7 @@ for($i=0;$i -lt 3;$i++) {
 $config=Join-Path $env:LOCALAPPDATA 'sentry_hud.cfg'
 $configHash=if(Test-Path -LiteralPath $config){Get-Sha $config}else{$null}
 if ($ValidateOnly) {
- [pscustomobject]@{status='validated';target=$patchName;version='sentry-hud-0.1.0-ui4';patchSha256=$patchHash;gpuSha256=$gpuHash;configPreserved=$true;running=@(Get-Process|Where-Object {$_.ProcessName -match 'helldivers2|arsenal'}|Select-Object -ExpandProperty ProcessName)}|ConvertTo-Json
+ [pscustomobject]@{status='validated';target=$patchName;version='sentry-hud-0.2.0';patchSha256=$patchHash;gpuSha256=$gpuHash;configPreserved=$true;running=@(Get-Process|Where-Object {$_.ProcessName -match 'helldivers2|arsenal'}|Select-Object -ExpandProperty ProcessName)}|ConvertTo-Json
  exit 0
 }
 $backup=Join-Path $work 'backup'
@@ -102,7 +104,7 @@ $installedFiles=@()
 foreach($suffix in @('','.stream','.gpu_resources')){
  $installedFiles += [pscustomobject]@{name=$patchName+$suffix;sha256=(Bytes-Sha $payloads[$suffix]);length=$payloads[$suffix].Length}
 }
-$record=[ordered]@{status='prepared';version='sentry-hud-0.1.0-ui4';dataDir=$dataDir;target=$patchName;timeUtc=[DateTime]::UtcNow.ToString('o');zipSha256=(Get-Sha $ArchivePath);previousSha256=$expectedExisting[$patchName];patchSha256=$patchHash;gpuSha256=$gpuHash;originalFiles=$originalFiles;installedFiles=$installedFiles;backup=$backup;config=$config;configSha256=$configHash;managerRegistered=$false}
+$record=[ordered]@{status='prepared';version='sentry-hud-0.2.0';dataDir=$dataDir;target=$patchName;timeUtc=[DateTime]::UtcNow.ToString('o');zipSha256=(Get-Sha $ArchivePath);previousSha256=$expectedExisting[$patchName];patchSha256=$patchHash;gpuSha256=$gpuHash;originalFiles=$originalFiles;installedFiles=$installedFiles;backup=$backup;config=$config;configSha256=$configHash;managerRegistered=$false}
 $record|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $recordPath -Encoding UTF8
 $replaced=@()
 try {

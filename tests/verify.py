@@ -9,7 +9,7 @@ import subprocess
 import sys
 import zipfile
 from lupa.lua51 import LuaRuntime
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 ROOT=Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode=True
 l=LuaRuntime(unpack_returned_tuples=True)
@@ -18,8 +18,8 @@ compile=l.eval('function(s) local f,e=loadstring(s);assert(f,e) end')
 for p in [*sorted((ROOT/'src').glob('*.lua')),ROOT/'build/sentry_hud.lua']:compile(p.read_text())
 engine=l.eval('function(s) return function()return assert(loadstring(s))() end end')((ROOT/'tests/engine.lua').read_text())
 l.execute((ROOT/'tests/ownership.lua').read_text())(module('bytes'),module('ownership'))
-l.execute((ROOT/'tests/icons.lua').read_text())(engine,module('presentation'),module('config'),module('icons'),module('catalog'),module('model'))
-print('PASS: all 10 native icon mappings; retained bitmap updates; title/status spacing; scaling; removal; failure fallback; shutdown')
+icon_samples=l.execute((ROOT/'tests/icons.lua').read_text())(engine,module('presentation'),module('config'),module('icons'),module('catalog'),module('model'))
+print('PASS: all 10 native icon mappings and ordered color tints; retained bitmap updates; title/status spacing; scaling; layer removal; partial failure fallback; shutdown')
 print('PASS: native layout pin; full peer identity; collision overflow; cycle/bounds/empty session rejection')
 e=l.execute((ROOT/'tests/test.lua').read_text())(module('bytes'),module('reader'),module('catalog'),module('model'),module('controller'),module('presentation'),module('config'),engine,module('ownership'),module('icons'))
 bundle=(ROOT/'build/sentry_hud.lua').read_text()
@@ -58,6 +58,37 @@ with zipfile.ZipFile(ROOT/'dist'/r['release']) as z:
  assert material[0]==int(art['material_hash'],16)
  assert struct.unpack_from('<Q',patch,material[2]+140)[0]==texture[0]
  assert json.loads(z.read('manifest.json'))['Guid']!='fe6c0ed7-c93c-4cac-96d3-5d52b2602b37'
+# Emulate the single-color material: ignore texture RGB entirely and apply the
+# actual Lua bitmap tint to the packaged DDS alpha. The old white-tinted atlas
+# fails this regression even though its texture pixels themselves were colored.
+def mask_bitmap(part,size,channel='A'):
+ lo,hi=part['lo'],part['hi'];tint=part['tint']
+ uv=[lo['x'],lo['y'],hi['x'],hi['y']]
+ coverage=atlas.crop(tuple(round(t*512) for t in uv)).getchannel(channel).resize((size,size),Image.Resampling.LANCZOS)
+ result=Image.new('RGBA',(size,size),tuple(tint[c] for c in ['r','g','b']))
+ result.putalpha(coverage);return result
+reference=Image.open(ROOT/'assets/icons/atlas.png').convert('RGBA')
+max_error=0
+for typ,sample in icon_samples.items():
+ cell=art['cells'][typ];assert len(sample)==len(cell['layers'])
+ source=reference.crop(tuple(round(t*512) for t in cell['uv']))
+ for size in [24,32,48]:
+  actual=Image.new('RGBA',(size,size))
+  for _,part in sorted(sample.items()):actual.alpha_composite(mask_bitmap(part,size))
+  pixels=list(actual.get_flattened_data())
+  assert sum(a>220 and g>r+20 and g>b+20 for r,g,b,a in pixels)>5,(typ,'missing green')
+  # The laser's very thin white barrel has only two opaque pixels at 24px.
+  assert sum(a>220 and min(r,g,b)>220 for r,g,b,a in pixels)>0,(typ,'missing white')
+  bg=Image.new('RGBA',(size,size),(16,23,25,255))
+  expected=Image.alpha_composite(bg,source.resize((size,size),Image.Resampling.LANCZOS)).convert('RGB')
+  rendered=Image.alpha_composite(bg,actual).convert('RGB')
+  error=max(ImageStat.Stat(ImageChops.difference(expected,rendered)).mean);max_error=max(max_error,error)
+  assert error<4,(typ,size,error,'layer colors/coverage differ from native SVG raster')
+  red_mask=Image.new('RGBA',(size,size))
+  for _,part in sorted(sample.items()):red_mask.alpha_composite(mask_bitmap(part,size,'R'))
+  red_rendered=Image.alpha_composite(bg,red_mask).convert('RGB')
+  assert max(ImageStat.Stat(ImageChops.difference(expected,red_rendered)).mean)<4,(typ,'RGB coverage differs')
+print(f'PASS: packaged mask-only shader simulation preserves green/white for all 10 icons at 24/32/48px; max mean channel error {max_error:.2f}/255')
 # Test actual BSL v15 discovery against our packaged archive.
 spec=importlib.util.spec_from_file_location('archive',ROOT.parent/'BingusSharedLoader/scripts/archive.py')
 a=importlib.util.module_from_spec(spec);spec.loader.exec_module(a)
@@ -79,7 +110,7 @@ for _,gui in e['guis'].items():
   if v['kind']=='rect':
    w,h=v['size']['x'],v['size']['y'];parts.append((v['at']['z'],f'<rect x="{x}" y="{y-h}" width="{w}" height="{h}" fill="{color}" opacity="{opacity}"/>'))
   elif v['kind']=='bitmap':
-   lo,hi=v['lo'],v['hi'];icon=atlas.crop(tuple(round(t*512) for t in [lo['x'],lo['y'],hi['x'],hi['y']]))
+   icon=mask_bitmap(v,88)
    png=BytesIO();icon.save(png,format='PNG');url='data:image/png;base64,'+base64.b64encode(png.getvalue()).decode()
    w,h=v['size']['x'],v['size']['y']
    parts.append((v['at']['z'],f'<image x="{x}" y="{y-h}" width="{w}" height="{h}" href="{url}"/>'))

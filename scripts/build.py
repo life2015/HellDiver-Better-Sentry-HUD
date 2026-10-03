@@ -9,7 +9,8 @@ ROOT=Path(__file__).resolve().parents[1]
 ENTRY='mods/retrox/sentry_hud'
 ARCHIVE='9ba626afa44a3aa3.patch_0'
 DISPLAY_NAME='炮台 HUD 优化'
-RELEASE=DISPLAY_NAME+' 0.1.0-ui4-BSL15-test.zip'
+VERSION='0.2.0'
+RELEASE=DISPLAY_NAME+' '+VERSION+'-BSL15.zip'
 
 def resource_hash(name):
     data=name.encode();mask=(1<<64)-1;mix=0xC6A4A7935BD1E995;value=len(data)*mix&mask
@@ -53,7 +54,7 @@ def build():
     archive[:72+len(types)+len(entries)]=header+types+entries
     archive,gpu=bytes(archive),bytes(gpu)
     manifest={'Version':1,'Guid':'75e2be2c-9110-40a1-bb29-a5b634a84e28','Name':DISPLAY_NAME,
-        'Description':'Shows locally owned automatic sentry health, ammo, deployment countdown and observed firing beside the player panel. Expired or retracting sentries disappear. BSL v15 / API 1.',
+        'Description':f'Version {VERSION}. Shows locally owned automatic sentry health, ammo, deployment countdown and observed firing beside the player panel. Expired or retracting sentries disappear. BSL v15 / API 1.',
         'Options':[{'Name':DISPLAY_NAME,'Description':'Automatic sentry HP, ammunition, deployment countdown and observed firing status.','Include':['Addon']}]}
     files={f'Addon/{ARCHIVE}':archive,f'Addon/{ARCHIVE}.stream':b'',f'Addon/{ARCHIVE}.gpu_resources':gpu,
         'manifest.json':(json.dumps(manifest,indent=2)+'\n').encode()}
@@ -62,7 +63,7 @@ def build():
     with zipfile.ZipFile(dist/RELEASE,'w',zipfile.ZIP_DEFLATED) as z:
         for name,data in sorted(files.items()):
             i=zipfile.ZipInfo(name,(2026,10,3,0,0,0));i.compress_type=zipfile.ZIP_DEFLATED;i.external_attr=0o100644<<16;z.writestr(i,data)
-    report={'entry':ENTRY,'resource':f'{resource_hash(ENTRY):016x}','source_sha256':hashlib.sha256(source.encode()).hexdigest(),
+    report={'version':VERSION,'entry':ENTRY,'resource':f'{resource_hash(ENTRY):016x}','source_sha256':hashlib.sha256(source.encode()).hexdigest(),
         'zip_sha256':hashlib.sha256((dist/RELEASE).read_bytes()).hexdigest(),'runtime_loader_minimum':15,
         'live_data_verified':True,'ownership_verified':True,'lifetime_data_verified':True,'in_game_hud_verified':False,'release':RELEASE,
         'resources':resource_report,'patch_sha256':hashlib.sha256(archive).hexdigest(),

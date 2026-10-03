@@ -33,13 +33,13 @@ end
 local Gui = {}
 function Gui.bitmap_uv(gui,material,lo,hi,at,size,tint)
     native_id(material)
-    if E.bitmap_fail then error('simulated missing icon material') end
+    if E.bitmap_fail or (E.bitmap_fail_after and (E.bitmap_calls or 0)>=E.bitmap_fail_after) then error('simulated missing icon material') end
     E.bitmap_calls=(E.bitmap_calls or 0)+1
     return put(gui,nil,{kind='bitmap',lo=lo,hi=hi,at=at,size=size,tint=tint})
 end
 function Gui.update_bitmap_uv(gui,id,material,lo,hi,at,size,tint)
     native_id(material)
-    if E.bitmap_fail then error('simulated missing icon material') end
+    if E.bitmap_fail or (E.bitmap_fail_after and (E.bitmap_calls or 0)>=E.bitmap_fail_after) then error('simulated missing icon material') end
     E.bitmap_calls=(E.bitmap_calls or 0)+1
     return put(gui,id,{kind='bitmap',lo=lo,hi=hi,at=at,size=size,tint=tint})
 end
