@@ -1,6 +1,11 @@
 本项目由当前工作区独立建立，渲染基础复用本工作区 EnemyHPHud 的 presentation.lua。
 保留其 HUD+ 视觉参考和临时 IdString64 生命周期处理；未打包 Enemy HP 的目标/伤害读取。
 
+Enemy HP 1.1.2 / Stim Homing port
+世界位置标记参考本工作区 Enemy HP 1.1.2 源码所记载的 unit registry、generation、
+root pose getter 与 Stingray 相机投影路径；采用独立有界读取并追加完整实体与读前后身份核对。
+不包含原版目标选择、伤害读取或输入处理。上述路径仍需在本 Mod 的炮台实例上游戏内验证。
+
 HD2 HUD+ 0.1.13 — DDRK1NG
 https://www.nexusmods.com/helldivers2/mods/15298
 参考原生字体/材质绑定方法、颜色与屏幕基准；弹药组件及 Player Status 控件的布局证据来自其打包源码。
@@ -19,3 +24,8 @@ v15 / API 1 运行依赖；本项目使用其公开归档格式和资源路径�
 Helldivers 2 — Arrowhead Game Studios / Sony Interactive Entertainment
 炮台图形来自用户安装游戏的 stratagem_icons 矢量资源；保留原生符号和颜色，移除方形底色。
 本包包含 10 种自动炮台图标转换后的专用贴图；不包含完整游戏图标库。
+
+Mod Options Menu / Bingus Text — CowboyBingus
+https://github.com/CowboyBingus/ModOptionsMenu
+使用公开的动态文本回调及 BingusTranslations.game_language 共享数据，为设置菜单判断游戏文字语言。
+未打包其脚本；测试复用工作区中的原版菜单校验、刷新逻辑与 UTF-8 工具。

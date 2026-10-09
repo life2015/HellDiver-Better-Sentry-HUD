@@ -1,0 +1,54 @@
+World marker camera investigation — 2026-10-07, Steam build 25480438
+
+Observed: marker stayed near upper-left of screen center rather than the sentry.
+Removing the 1.2m / screen offsets did not resolve it.
+
+Read-only capture: main world contains five core/units/camera units. Unit 1
+tracks the current player view. Four others have world translation (0,0,501),
+forward (0,0,-1), orthographic projection and +/-1024 bounds. Projecting sentry
+XY through these cameras places it near screen center with little movement.
+World.units_by_resource enumerates a resource index, not the world unit array;
+there is no player-first ordering contract. Old code picked element 1 and used
+an unrelated debug-view pose for front/range filtering.
+
+Native binding evidence from the retained EXE image (RVA aligned):
+- Camera.world_to_screen binding 0x41FA80 calls 0x4D40F0. Accepts optional
+  Vector2 viewport as argument 4 (checked at 0x41FADA); returns vector + depth.
+- Camera.world_pose binding 0x421A70 reads scene-node world transform.
+- World.debug_camera_pose binding 0x3F1270 copies world+0x230920.
+- World.units_by_resource binding 0x3EB040 calls 0x335BD0 and 0x335EB0,
+  which query world+0x230CA8 resource index.
+- Application.main_world uses 0x317DE0; world array from
+  ptr(exe+0x1A10208)+0x598, count+0x590. Selection uses world time/unit count.
+These RVAs were used for read-only diagnosis, not added to runtime code.
+
+Fix: match Camera.world_pose position/forward to World.debug_camera_pose among
+at most 64 candidates. Require <=4m and forward dot>=0.98; pick minimum pose
+error. If none match, hide; never fall back to first. Use selected camera's
+position/forward dot for the front test and explicit GUI resolution for projection. Preserve icon's
+center at the projected sentry root. No persistent native camera/vector refs.
+
+Tests: three captured sets of player + four overhead poses, five list orders
+each, missing player, stale candidate, opposite-facing camera, camera motion,
+zoom and viewport/marker scales. Camera pose snapshots stripped of addresses
+are in tests/camera_view.json. These verify selection and offline geometry;
+in-game alignment still requires user validation.
+
+Deployed patch_7 SHA256:
+aabbacc3798535850ce0528bfc1f5599bfb907f68a9702e508c454345f2e5835
+Remote record: C:\Users\retrox\Projects\helldivermods\sentry-camera-fix-20261007\deployment.json
+Other 25 patch files and existing configurations verified unchanged, including
+new Enemy HP HUD+ patch_8 and updated Rover patch_3.
+
+Depth regression follow-up — 2026-10-07
+The first camera-selection patch incorrectly treated world_to_screen's second
+return as metres. HD2's implementation at EXE RVA 0x4D469D-0x4D46A5 computes
+abs(clip Z)/clip W; reverse-Z values are small for distant visible targets.
+The public engine reference's metres wording does not describe this game build.
+Live capture confirmed valid front distances 33.299m and 41.509m for two sentries;
+log confirmed successful view matching. Replaced depth > 0.5 on the second
+return with dot(target - selectedCameraOrigin, selectedCameraForward) > 0.5.
+Projection still uses native world_to_screen and matched camera. Regression
+mocks now return 0.05 / distance and 0.001; they fail against the previous build
+and pass after this change. First projection logs viewport, screen coordinates,
+world forward distance and raw clip depth to aid subsequent in-game checks.

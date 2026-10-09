@@ -86,7 +86,7 @@ return function(sr, font_ids, log, icons)
         else self.rects[key] = assert(Gui.rect(self.gui, at, size, tint)) end
     end
 
-    function ui:icon(key,typ,x,y,size)
+    function ui:icon(key,typ,x,y,size,alpha)
         local cell=icons and icons.cells[typ]
         if not cell or self.icon_failed or not Gui.bitmap_uv or not Gui.update_bitmap_uv or
             not Gui.destroy_bitmap then return false end
@@ -97,19 +97,28 @@ return function(sr, font_ids, log, icons)
             if log then log('Native sentry icon masks bound; per-layer color tint') end
         end
         x,y,size=round(x),round(y),math.max(1,round(size))
+        alpha=clamp(round(alpha or 255),0,255)
+        local opacity=icons.opacity
+        local level=opacity and clamp(round(alpha/255*20),1,20)
         -- This HUD material uses the texture as a monochrome mask. Preserve
         -- native artwork colors explicitly, including overlapping path order.
         for index,layer in ipairs(cell) do
             local slot=key..':'..index
             local old=self.icon_cache[slot]
-            if not (old and old.type==typ and old.x==x and old.y==y and old.size==size) then
+            if not (old and old.type==typ and old.x==x and old.y==y and old.size==size and old.alpha==alpha) then
                 local uv,rgb=layer.uv,layer.color
+                if opacity then
+                    local cell=(level-1)*opacity.count+layer.cell
+                    local u=(cell%opacity.columns)*opacity.pitch+opacity.inset
+                    local v=math.floor(cell/opacity.columns)*opacity.pitch+opacity.inset
+                    uv={u/opacity.size,v/opacity.size,(u+opacity.edge)/opacity.size,(v+opacity.edge)/opacity.size}
+                end
                 local lo,hi=V2(uv[1],uv[2]),V2(uv[3],uv[4])
-                local at,dimensions,tint=V3(x,y,951+index),V2(size,size),Color(255,rgb[1],rgb[2],rgb[3])
+                local at,dimensions,tint=V3(x,y,951+index),V2(size,size),Color(opacity and 255 or alpha,rgb[1],rgb[2],rgb[3])
                 local id=self.bitmaps[slot]
                 if id then Gui.update_bitmap_uv(self.gui,id,I.from_hex(icons.material),lo,hi,at,dimensions,tint)
                 else self.bitmaps[slot]=assert(Gui.bitmap_uv(self.gui,I.from_hex(icons.material),lo,hi,at,dimensions,tint)) end
-                self.icon_cache[slot]={type=typ,x=x,y=y,size=size}
+                self.icon_cache[slot]={type=typ,x=x,y=y,size=size,alpha=alpha}
             end
         end
         return true
@@ -154,41 +163,52 @@ return function(sr, font_ids, log, icons)
         end
     end
 
-    -- Native anchor is already in screen pixels. Manual mode retains ui1/ui2 coordinates.
+    -- Screen-right layout is independent of Player Status visibility/geometry.
+    -- The whole group is vertically centered, with an optional screen offset.
     function ui:draw(rows, options, anchor)
-        if #rows==0 then self:hide(); return end
-        if options.anchor_player~=0 and (not anchor or anchor.shown<=0) then self:hide(); return end
+        local opacity=clamp(round((options.hud_opacity or 100)/5)*5,0,100)/100
+        if #rows==0 or options.enabled==0 or opacity==0 then self:hide(); return end
+        local layout=options.layout or (options.anchor_player==0 and 3 or 1)
+        local anchored=layout==1
+        if anchored and (not anchor or anchor.shown<=0) then self:hide(); return end
         if not self:ensure() then return end
         local sw,sh=Gui.resolution()
         if not sw or not sh or sw<=0 or sh<=0 then self:hide(); return end
-        local anchored=options.anchor_player~=0
-        local scale=(anchored and anchor.scale or math.min(sw/1920,sh/1080))*(options.scale or 1)
+        local screen_scale=math.min(sw/1920,sh/1080)
+        local scale=(anchored and anchor.scale or screen_scale)*(options.scale or 1)
         local width=274*scale
-        local x,bottom
+        if width>sw or 64*scale>sh then self:hide();return end
+        local x,bottom,count
         if anchored then
             x=anchor.right+(options.panel_gap or 12)*anchor.scale
             bottom=anchor.bottom
             -- Never clamp back over the player panel if the requested layout cannot fit.
             if x<0 or bottom<0 or x+width>sw or bottom+64*scale>sh then self:hide();return end
+        elseif layout==2 then
+            x=clamp(sw-(options.right_margin or 48)*screen_scale-width,0,sw-width)
+            count=math.min(#rows,options.max_rows or 6,math.max(1,math.floor((sh-26*scale)/(70*scale))))
+            local group_height=(count-1)*70*scale+64*scale+(#rows>count and 26*scale or 0)
+            bottom=clamp((sh-group_height)/2+(options.right_vertical_offset or 0)*screen_scale,
+                0,math.max(0,sh-group_height))
         else
             x=clamp((options.x or 540)*scale,0,math.max(0,sw-width))
             bottom=clamp((options.y or 48)*scale,0,math.max(0,sh-70*scale))
         end
-        local count=math.min(#rows,options.max_rows or 6,math.max(1,math.floor((sh-bottom-26*scale)/(70*scale))))
+        count=count or math.min(#rows,options.max_rows or 6,math.max(1,math.floor((sh-bottom-26*scale)/(70*scale))))
         local active_rects,active_texts,active_bitmaps={},{},{}
         local function rect(k,rx,ry,rw,rh,rgb,a)
-            active_rects[k]=true;self:rect(k,rx,ry,rw,rh,951,rgb,a)
+            active_rects[k]=true;self:rect(k,rx,ry,rw,rh,951,rgb,a*opacity)
         end
         local function label(k,value,rx,ry,size,rgb)
             for i=1,5 do active_texts[k..i]=true end
-            self:text(k,value,size,rx,ry,rgb,235,math.max(1,scale))
+            self:text(k,value,size,rx,ry,rgb,235*opacity,math.max(1,scale))
         end
         local accent={221,199,112}
         for i=1,count do
             local r=rows[i];local y=bottom+(i-1)*70*scale;local k=tostring(i)..':'
             rect(k..'bg',x,y,width,64*scale,{16,23,25},155)
-            rect(k..'edge',x,y,2*scale,64*scale,accent,200)
-            local icon_ok,has_icon=pcall(self.icon,self,k..'icon',r.type,x+10*scale,y+20*scale,40*scale)
+            rect(k..'edge',layout==2 and x+width-2*scale or x,y,2*scale,64*scale,accent,200)
+            local icon_ok,has_icon=pcall(self.icon,self,k..'icon',r.type,x+10*scale,y+20*scale,40*scale,255*opacity)
             if not icon_ok then
                 self.icon_failed=true
                 if log then log('Icons unavailable; keeping text HUD: '..tostring(has_icon)) end

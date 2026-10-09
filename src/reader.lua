@@ -86,6 +86,10 @@ return function(api,B,catalog,ownership)
             assert(chambered<=1,'invalid chamber setting')
             -- Runtime chamber_round is a projectile type, not a bullet count.
             local extra=(chambered==1 and chamber~=0) and 1 or 0
+            -- setting+136 is BASE capacity, not the ship-upgraded capacity.
+            -- Live MG262/base175 and Gatling750/base500 prove it cannot be used
+            -- as upgraded capacity. The model uses the first observed count as
+            -- the user-selected full-bar reference instead.
             s.ammo=amount+extra;s.reserve=reserve;s.feed='magazine';return
         end
         -- No validated sentry currently uses WeaponRounds in the live sample.

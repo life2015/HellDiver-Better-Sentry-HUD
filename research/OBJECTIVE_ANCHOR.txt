@@ -1,0 +1,65 @@
+2026-10-07 — Right-side layout / objective panel offline investigation
+
+Scope
+User requests a centered right-side sentry HUD, preferably just below the
+upper-right mission/task panel. User currently cannot run a mission and asked
+for offline analysis. No live probe or deployment performed for this change.
+
+Verified code sources
+- SentryHUD/build/game-code.bin: memory-image RVAs for the already pinned
+  Steam build 25480438, game 1.8.46015.0.
+- HD2 HUD+ 0.1.13 provides the independently live-verified HUD root, embedded
+  mission HUD offset and widget screen geometry used by Player Status.
+- No new offsets are used by the runtime addon in this change.
+
+Candidate panel (not yet live-verified)
+HUD root pointer: game.dll + 0x346D538
+Embedded mission HUD: root + 0x24E340
+Candidate task panel: mission HUD + 0x46050 (root + 0x294390)
+
+Evidence from disassembly
+- Mission HUD construction at RVA 0x12E96D0 includes the known Player Status
+  panel (+0x60), stamina (+0x5778), squad (+0x1F8C8), and other panels.
+- RVA 0x12E9DFE passes mission HUD +0x46050 to constructor 0x17CE750.
+- 0x17CE790..0x17CE7D9 sets size (300,430) and both anchor/pivot pairs to
+  (1,1): this is a right/top anchored container, not a bottom-right panel.
+- Child groups at +0x610 and +0x5848 are controlled separately by
+  0x17D03A0. Their visibility flags are stored at +0xFE220/+0xFE221.
+  That update reads two HUD-option-like settings and a HUD held-state flag,
+  fades these groups, then adjusts +0x330/+0x4B8 geometry using their sizes.
+- Child region +0x6DF0 has up to 16 detail rows, stride 0xF068; update code
+  0x17CF8A0 selects content from mission-like instances before calling
+  0x184B700. This supports the objective-panel hypothesis but does not prove
+  which visible group is primary/secondary or its final on-screen bounds.
+- Strings hud_primary_objective / hud_secondary_objective are referenced
+  by settings code at 0x102FD67 / 0x102FD8D. These are settings identifiers,
+  not direct evidence of the panel address; do not confuse the two.
+
+Why automatic following is not enabled yet
+The constructor's 300x430 is a container size, not necessarily the occupied
+visible region. Collapsed content, secondary tasks, fades, native HUD scale,
+localization/wrapped lines, and held-map state can change the actual bottom.
+Using the fixed container bottom would create unexplained gaps or overlap.
+Reading the existing widget screen x/y/size/scale/shown fields should be
+possible, but correspondence and occupied bounds require live validation.
+
+Prepared next validation
+scripts/probe_objective_hud.ps1 reads only the root and eight candidate
+widgets (0,110,220,330,4B8,610,5848,6DF0), visibility bytes and known map state.
+It guards the game build and root stability and retains exact read bytes.
+When a mission is available: capture normal objectives, expanded/changed
+objectives, map open/closed, and another HUD scale. Match returned coordinates
+to visible task content before implementing an anchor. No new runtime memory
+reader or unsafe fallback to candidate coordinates has been installed.
+
+Implemented locally in 0.3.0-test.3
+- Screen Right centers the whole sentry-card group vertically; right stripe
+  stays on the right. Count and overflow label are included in centering.
+- Right Layout Vertical Offset: -450..450 at 1920x1080, default 0;
+  positive raises the group, negative lowers it. Screen bounds constrain it.
+- The obsolete right_bottom setting no longer drives this layout.
+- Right-side cards hide on map open/unknown/read failure, then recover without
+  discarding tracked sentries or initial-ammo baselines. Left/manual layouts
+  retain their previous behavior.
+- Tests cover five resolutions, three scales, signed offsets, count changes,
+  clipping, menu persistence, map hide/recovery, and existing marker behavior.

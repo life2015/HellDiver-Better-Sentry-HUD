@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 ENTRY='mods/retrox/sentry_hud'
 ARCHIVE='9ba626afa44a3aa3.patch_0'
 DISPLAY_NAME='炮台 HUD 优化'
-VERSION='0.2.0'
+VERSION='0.3.1'
 RELEASE=DISPLAY_NAME+' '+VERSION+'-BSL15.zip'
 
 def resource_hash(name):
@@ -24,20 +24,25 @@ def resource_hash(name):
 
 def build():
     embedded=''
-    for name in ['bytes','catalog','icons','windows','ownership','reader','hud_anchor','model','presentation','config','controller']:
-        binding=name if name in ['bytes','catalog','icons'] else 'make_'+name
+    for name in ['bytes','catalog','icons','marker_icons','windows','ownership','reader','hud_anchor','positions','model','presentation','markers','config','settings','controller']:
+        binding=name if name in ['bytes','catalog','icons','marker_icons'] else 'make_'+name
         embedded+='local '+binding+'=(function()\n'+(ROOT/'src'/f'{name}.lua').read_text()+'\nend)()\n'
     source=(ROOT/'src/addon.lua').read_text().replace('--[[MODULES]]',embedded)
     out=ROOT/'build';out.mkdir(exist_ok=True)
     (out/'sentry_hud.lua').write_text(source)
     resource=struct.pack('<II',len(source.encode()),2)+source.encode()
-    art=ROOT/'assets/icons';icon_manifest=json.loads((art/'manifest.json').read_text())
+    art=ROOT/'assets/icons';icon_manifest=json.loads((art/'card-opacity.json').read_text())
+    marker_manifest=json.loads((art/'marker-opacity.json').read_text())
     resources=sorted([
         (0xA14E8DFA2CD117E2,resource_hash(ENTRY),resource,b''),
         (0xCD4238C6A0C69E32,resource_hash(icon_manifest['texture']),
-         (art/'icons.texture.main').read_bytes(),(art/'icons.texture.gpu_resources').read_bytes()),
+         (art/'card-opacity.texture.main').read_bytes(),(art/'card-opacity.texture.gpu_resources').read_bytes()),
         (0xEAC0B497876ADEDF,resource_hash(icon_manifest['material']),
-         (art/'icons.material.main').read_bytes(),b''),
+         (art/'card-opacity.material.main').read_bytes(),b''),
+        (0xCD4238C6A0C69E32,resource_hash(marker_manifest['texture']),
+         (art/'marker-opacity.texture.main').read_bytes(),(art/'marker-opacity.texture.gpu_resources').read_bytes()),
+        (0xEAC0B497876ADEDF,resource_hash(marker_manifest['material']),
+         (art/'marker-opacity.material.main').read_bytes(),b''),
     ])
     kinds=sorted(set(r[0] for r in resources));count=len(resources)
     start=(72+32*len(kinds)+80*count+15)&~15
@@ -54,7 +59,7 @@ def build():
     archive[:72+len(types)+len(entries)]=header+types+entries
     archive,gpu=bytes(archive),bytes(gpu)
     manifest={'Version':1,'Guid':'75e2be2c-9110-40a1-bb29-a5b634a84e28','Name':DISPLAY_NAME,
-        'Description':f'Version {VERSION}. Shows locally owned automatic sentry health, ammo, deployment countdown and observed firing beside the player panel. Expired or retracting sentries disappear. BSL v15 / API 1.',
+        'Description':f'Release {VERSION}. Automatic sentry health, ammo and countdown, vertically centered at the right edge, with Chinese/English menu text, independent card/marker opacity, world markers with optional distance labels and a green firing dot. Optional Mod Options Menu settings require BSL v18+; basic HUD supports BSL v15 / API 1.',
         'Options':[{'Name':DISPLAY_NAME,'Description':'Automatic sentry HP, ammunition, deployment countdown and observed firing status.','Include':['Addon']}]}
     files={f'Addon/{ARCHIVE}':archive,f'Addon/{ARCHIVE}.stream':b'',f'Addon/{ARCHIVE}.gpu_resources':gpu,
         'manifest.json':(json.dumps(manifest,indent=2)+'\n').encode()}

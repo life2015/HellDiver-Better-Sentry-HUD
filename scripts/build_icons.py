@@ -117,4 +117,7 @@ def build():
         lua+='        },\n'
     (ROOT/'src/icons.lua').write_text(lua+'    },\n}\n')
     print('Built',len(cells),'native sentry icons;',mask_index,'tinted masks;',len(gpu),'GPU bytes')
-if __name__=='__main__':build()
+if __name__=='__main__':
+    build()
+    from build_opacity_icons import build as build_opacity
+    build_opacity()

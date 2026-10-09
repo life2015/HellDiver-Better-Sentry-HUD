@@ -1,8 +1,23 @@
-anchor_player=1
+enabled=1
+# 1 = Beside Player Status, 2 = Screen Right, 3 = Manual Position.
+layout=1
 panel_gap=12
-# x and y apply only with anchor_player=0 (manual position).
+# Screen Right, at 1920x1080; center the whole group vertically.
+right_margin=48
+# Positive offset moves up; negative moves down. Legacy right_bottom is ignored.
+right_vertical_offset=0
+# x and y apply only with layout=3 (manual position).
 x=540
 y=48
 scale=1
+# Opacity percentages, 0-100 in steps of 5; 0 hides only this component.
+hud_opacity=100
 max_rows=6
 poll_interval=0.125
+# White world markers; hidden while viewing the map or the pause menu.
+markers_enabled=1
+# Show metres centered below world marker bars (1 = on, 0 = off).
+marker_show_distance=1
+marker_scale=1
+marker_distance=300
+marker_opacity=60

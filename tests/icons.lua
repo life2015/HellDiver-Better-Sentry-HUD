@@ -33,6 +33,17 @@ return function(make_engine,make_presentation,make_config,icons,catalog,make_mod
     local unknown=item(types[1]);unknown.type='UNKNOWN';ui:draw({unknown},options)
     assert(not next(ui.bitmaps) and not next(ui.icon_cache) and ui.gui.parts[ui.texts['1:name5']].text==unknown.name)
     ui:draw({item(types[1])},options);assert(ui.bitmaps['1:icon:1'],'stale cache prevented icon recreation')
+    -- Opacity changes on stationary cards must refresh retained UVs as well as
+    -- text/background/bars, without changing the world marker setting.
+    local part=ui.gui.parts[ui.bitmaps['1:icon:1']];local old_u,old_v=part.lo.x,part.lo.y
+    options.hud_opacity=50;E.next_frame();ui:draw({item(types[1])},options)
+    part=ui.gui.parts[ui.bitmaps['1:icon:1']]
+    assert(part.lo.x~=old_u or part.lo.y~=old_v,'opacity change left stale icon UVs')
+    assert(part.tint.a==255 and ui.gui.parts[ui.rects['1:bg']].tint.a==78 and
+        ui.gui.parts[ui.texts['1:name5']].tint.a==118 and ui.gui.parts[ui.rects['1:fill']].tint.a==113)
+    options.hud_opacity=0;ui:draw({item(types[1])},options);assert(not ui.visible and options.marker_opacity==60)
+    options.hud_opacity=100;ui:draw({item(types[1])},options);assert(ui.visible)
+    part=ui.gui.parts[ui.bitmaps['1:icon:1']];assert(part.lo.x==old_u and part.lo.y==old_v)
     ui:hide();assert(not ui.visible)
     ui:draw({item(types[1])},options);assert(ui.visible)
     ui:dispose();assert(not next(ui.bitmaps))
