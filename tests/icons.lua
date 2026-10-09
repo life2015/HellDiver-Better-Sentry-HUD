@@ -44,6 +44,36 @@ return function(make_engine,make_presentation,make_config,icons,catalog,make_mod
     options.hud_opacity=0;ui:draw({item(types[1])},options);assert(not ui.visible and options.marker_opacity==60)
     options.hud_opacity=100;ui:draw({item(types[1])},options);assert(ui.visible)
     part=ui.gui.parts[ui.bitmaps['1:icon:1']];assert(part.lo.x==old_u and part.lo.y==old_v)
+    -- Background setting is independent of foreground and marker opacity.
+    -- Crossing 30% removes/recreates the retained stripe in every layout.
+    for _,layout in ipairs({1,2,3}) do
+        options.layout=layout
+        local anchor={right=400,bottom=50,scale=1,shown=1}
+        for _,overall in ipairs({100,50}) do
+            options.hud_opacity=overall
+            for _,background in ipairs({100,30,29,0,29,30,100}) do
+                options.hud_background_opacity=background
+                E.next_frame();ui:draw({item(types[1]),item(types[2])},options,anchor)
+                assert(ui.visible and options.marker_opacity==60)
+                for row=1,2 do
+                    local key=row..':'
+                    local bg=ui.gui.parts[ui.rects[key..'bg']]
+                    assert(bg.tint.a==math.floor(155*overall/100*background/100+0.5))
+                    local edge=ui.gui.parts[ui.rects[key..'edge']]
+                    assert((edge~=nil)==(background>=30),'stripe threshold or cleanup failed')
+                    if edge then
+                        assert(edge.tint.a==math.floor(200*overall/100+0.5))
+                        local expected=layout==2 and bg.at.x+bg.size.x-edge.size.x or bg.at.x
+                        assert(math.abs(edge.at.x-expected)<=1,'stripe on incorrect side')
+                    end
+                    assert(ui.gui.parts[ui.texts[key..'name5']].tint.a==math.floor(235*overall/100+0.5))
+                    assert(ui.gui.parts[ui.rects[key..'fill']].tint.a==math.floor(225*overall/100+0.5))
+                    assert(ui.icon_cache[key..'icon:1'].alpha==math.floor(255*overall/100+0.5))
+                end
+            end
+        end
+    end
+    options.layout=3;options.hud_opacity=100;options.hud_background_opacity=100
     ui:hide();assert(not ui.visible)
     ui:draw({item(types[1])},options);assert(ui.visible)
     ui:dispose();assert(not next(ui.bitmaps))

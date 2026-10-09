@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 ENTRY='mods/retrox/sentry_hud'
 ARCHIVE='9ba626afa44a3aa3.patch_0'
 DISPLAY_NAME='炮台 HUD 优化'
-VERSION='0.3.1'
+VERSION='0.3.2'
 RELEASE=DISPLAY_NAME+' '+VERSION+'-BSL15.zip'
 
 def resource_hash(name):
@@ -59,7 +59,7 @@ def build():
     archive[:72+len(types)+len(entries)]=header+types+entries
     archive,gpu=bytes(archive),bytes(gpu)
     manifest={'Version':1,'Guid':'75e2be2c-9110-40a1-bb29-a5b634a84e28','Name':DISPLAY_NAME,
-        'Description':f'Release {VERSION}. Automatic sentry health, ammo and countdown, vertically centered at the right edge, with Chinese/English menu text, independent card/marker opacity, world markers with optional distance labels and a green firing dot. Optional Mod Options Menu settings require BSL v18+; basic HUD supports BSL v15 / API 1.',
+        'Description':f'Release {VERSION}. Automatic sentry health, ammo and countdown, vertically centered at the right edge, with Chinese/English menu text, independent card/background/marker opacity, world markers with optional distance labels and a green firing dot. Optional Mod Options Menu settings require BSL v18+; basic HUD supports BSL v15 / API 1.',
         'Options':[{'Name':DISPLAY_NAME,'Description':'Automatic sentry HP, ammunition, deployment countdown and observed firing status.','Include':['Addon']}]}
     files={f'Addon/{ARCHIVE}':archive,f'Addon/{ARCHIVE}.stream':b'',f'Addon/{ARCHIVE}.gpu_resources':gpu,
         'manifest.json':(json.dumps(manifest,indent=2)+'\n').encode()}

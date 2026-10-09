@@ -12,6 +12,9 @@ y=48
 scale=1
 # Opacity percentages, 0-100 in steps of 5; 0 hides only this component.
 hud_opacity=100
+# Background only: 100 preserves original shading, 0 is transparent.
+# Side stripe is hidden below 30, visible at 30 or above.
+hud_background_opacity=100
 max_rows=6
 poll_interval=0.125
 # White world markers; hidden while viewing the map or the pause menu.

@@ -167,6 +167,7 @@ return function(sr, font_ids, log, icons)
     -- The whole group is vertically centered, with an optional screen offset.
     function ui:draw(rows, options, anchor)
         local opacity=clamp(round((options.hud_opacity or 100)/5)*5,0,100)/100
+        local background=clamp(options.hud_background_opacity or 100,0,100)/100
         if #rows==0 or options.enabled==0 or opacity==0 then self:hide(); return end
         local layout=options.layout or (options.anchor_player==0 and 3 or 1)
         local anchored=layout==1
@@ -206,8 +207,10 @@ return function(sr, font_ids, log, icons)
         local accent={221,199,112}
         for i=1,count do
             local r=rows[i];local y=bottom+(i-1)*70*scale;local k=tostring(i)..':'
-            rect(k..'bg',x,y,width,64*scale,{16,23,25},155)
-            rect(k..'edge',layout==2 and x+width-2*scale or x,y,2*scale,64*scale,accent,200)
+            rect(k..'bg',x,y,width,64*scale,{16,23,25},155*background)
+            if background>=0.30 then
+                rect(k..'edge',layout==2 and x+width-2*scale or x,y,2*scale,64*scale,accent,200)
+            end
             local icon_ok,has_icon=pcall(self.icon,self,k..'icon',r.type,x+10*scale,y+20*scale,40*scale,255*opacity)
             if not icon_ok then
                 self.icon_failed=true

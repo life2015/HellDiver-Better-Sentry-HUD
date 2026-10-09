@@ -13,13 +13,13 @@ return function(make_settings,make_config,T,options_source,api_source)
         local mom={state=state,note=function()end,translation={T=T,tr=function(k)return k end},
             TEXT_TEMPLATE=123,MAX_MODS=112,MAX_ROWS=32,descriptor=function()return 0,{}end}
         assert(loadstring(options_source))(mom)
-        local saved={[prefix..'layout']='2',[prefix..'hud_opacity']='35',[prefix..'marker_opacity']='85'}
+        local saved={[prefix..'layout']='2',[prefix..'hud_opacity']='35',[prefix..'marker_opacity']='85',[prefix..'hud_background_opacity']='29'}
         mom.saved_values=function()return saved end
         assert(loadstring(api_source))(mom)
         globals.ModOptionsMenu=mom.api
         local options=make_config('');local S=make_settings(options,globals)
-        S:step();assert(S.registered==15 and #state.mods==1)
-        assert(options.layout==2 and options.hud_opacity==35 and options.marker_opacity==85)
+        S:step();assert(S.registered==16 and #state.mods==1)
+        assert(options.layout==2 and options.hud_opacity==35 and options.marker_opacity==85 and options.hud_background_opacity==29)
         return globals,mom,options,S
     end
     local globals,mom,options,S=session(nil)
@@ -30,8 +30,8 @@ return function(make_settings,make_config,T,options_source,api_source)
     local function refresh(tag)
         globals.BingusTranslations={version=1,game_language=tag,steam_language='zh-Hans',override='zh-Hans'}
         mom.translation.refresh();S:step()
-        assert(state.option_count==15 and #state.mods==1 and #state.mods[1].order==15)
-        assert(state.values[prefix..'layout']==2 and options.hud_opacity==35 and options.marker_opacity==85)
+        assert(state.option_count==16 and #state.mods==1 and #state.mods[1].order==16)
+        assert(state.values[prefix..'layout']==2 and options.hud_opacity==35 and options.marker_opacity==85 and options.hud_background_opacity==29)
         for _,callbacks in pairs(state.callbacks) do assert(#callbacks==1,'language switch duplicated callbacks') end
     end
     for _,tag in ipairs({'zh-Hans','zh-Hant','zh-CN','zh-TW','zh','ZH-hans'}) do

@@ -18,7 +18,7 @@ return function(source,make_engine)
     env.ModOptionsMenu={api=1,register_option=function()registered=registered+1;return true end,
         get=function(id)if id=='retrox.sentry_hud.layout' then return 2 end end,
         on_change=function(id,fn)callbacks[id]=fn;return true end}
-    hook();assert(registered==15 and state.options.layout==2,'late menu not connected to bundled update')
+    hook();assert(registered==16 and state.options.layout==2,'late menu not connected to bundled update')
     state.controller.tick=function()error('simulated render failure')end
     hook();assert(called==3 and state.error:find('simulated render failure'))
     E.worlds={}
@@ -31,5 +31,5 @@ return function(source,make_engine)
     env.SentryHUD=nil
     env.CowboyBingusModLoader={after_startup=function(fn)scheduled=fn;return true end}
     state=chunk();assert(type(scheduled)=='function')
-    scheduled();assert(state.settings.registered==15 and state.options.layout==2)
+    scheduled();assert(state.settings.registered==16 and state.options.layout==2)
 end

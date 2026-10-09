@@ -1,6 +1,9 @@
-炮台 HUD 优化 0.3.1 — 正式版 / Release
+炮台 HUD 优化 0.3.2 — 正式版 / Release
 
-本版新增默认开启的“显示炮台距离”菜单开关，在 World Marker 下方居中显示整数米数。
+本版新增独立的 HUD 卡片背景不透明度设置，低于 30% 隐藏侧边竖线。
+Adds independent card background opacity; the side stripe hides below 30%.
+
+保留默认开启的“显示炮台距离”菜单开关，在 World Marker 下方居中显示整数米数。
 Adds a default-on Show Sentry Distance toggle, with centered metre labels below world markers.
 
 World Marker 开火提示改为图标右下角的绿色圆点，弹药条保持常亮。
@@ -23,12 +26,18 @@ The new firing indicator still needs in-game visual confirmation.
   图标、文字和底部血条保持正常阅读方向。右侧布局不依赖 Player Status 是否可见。
 - 可调 Show Sentry HUD、HUD Scale、Maximum Sentries、Player Status Gap、
   Right Edge Margin、Right Layout Vertical Offset 和 Manual X / Y。
-  另有 Sentry World Markers、World Marker Scale 和 World Marker Range，共 15 项。
+  另有 Sentry World Markers、World Marker Scale 和 World Marker Range，共 16 项。
 - Sentry HUD Opacity (%) 默认 100%，统一调整卡片图标、文字、状态条及背景。
   World Marker Opacity (%) 默认 60%，统一调整位置图标、开火圆点、生命／弹药条及距离文字。
   两项范围均为 0–100%，步进 5%；0% 只隐藏对应部分。100% 保留原设计中背景和线条的透明层次。
   Both opacity sliders range from 0–100% in 5% steps and are saved independently.
   Card opacity defaults to 100%; world marker opacity defaults to 60%. APPLY changes immediately.
+- HUD Card Background Opacity (%) / HUD 卡片背景不透明度 (%) 范围 0–100%，步进 1%。
+  默认 100% 保留原有半透明底色；0% 完全透明。低于 30% 隐藏侧边竖线，30% 及以上保留。
+  仅调整卡片背景，不改变文字、图标、血条或 World Marker；整体 HUD 不透明度仍作用于卡片。
+  左侧、右侧和手动布局均适用，切换数值立即更新，设置会保存。
+  Background opacity defaults to 100% of the original shading. Below 30% the side stripe disappears.
+  Text, icons, bars and world markers are unaffected; overall HUD opacity still applies.
 - 点击 APPLY 后生效，关闭菜单即可看到布局变化，无须重启游戏。
   Mod Options Menu 保存设置，下次启动恢复；首次注册以现有 cfg 值作为默认值。
   有菜单保存值时优先使用保存值，不改写 cfg。未应用的菜单编辑不影响 HUD。
@@ -38,7 +47,7 @@ The new firing indicator still needs in-game visual confirmation.
   打开地图或无法确认地图状态时隐藏右侧卡片，关闭地图后恢复；余弹基准保留。
   右上角任务面板已找到候选结构，但尚未实机核对可见内容下沿，未启用自动跟随。
   原布局跟随原生 HUD 缩放；右侧和手动布局使用分辨率缩放。
-- 菜单分类、全部 15 项设置及说明、布局选项跟随游戏的“文字语言”：
+- 菜单分类、全部 16 项设置及说明、布局选项跟随游戏的“文字语言”：
   简体与繁体中文统一使用中文文案，其余语言使用英文；HUD 卡片文字仍为英文。
   复用 Mod Options Menu 公开的 BingusTranslations.game_language 数据，不按系统、Steam
   或翻译包强制语言判断。尚未检测到文字语言时使用英文；修改语言后重新打开 ESC 菜单刷新。
@@ -147,8 +156,9 @@ scripts/replay_live.py 使用本地保留的诊断快照；原始快照和模块
 使用 Pillow 和 resvg-py 转换 10 个原生矢量符号并生成分层遮罩的 BC3 多级贴图。
 常规 scripts/build.py 使用 assets/icons 已生成资源，不要求转换工具或 HUD+ 安装。
 
-0.3.1 离线验证状态
-距离计算、居中、显示开关、设置保存、中英文、缩放与透明度及文字清理通过离线测试。
+0.3.2 离线验证状态
+背景不透明度、29%/30% 阈值、三种布局切换及保存与中英文菜单通过离线测试。
+距离计算、居中、显示开关、缩放与透明度及文字清理保留回归测试。
 绿色开火圆点、弹药条常亮、停火与隐藏后的清理保留回归测试。
 右侧居中、上下偏移、地图隐藏及中英文菜单切换保留回归测试；新版本游戏内效果待确认。
 任务面板候选位置见 research/OBJECTIVE_ANCHOR.txt；实时跟随需要实机快照确认。

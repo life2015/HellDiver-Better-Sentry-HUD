@@ -1,5 +1,5 @@
 -- HD2-Addon: mods/retrox/sentry_hud
-local REVISION='sentry-hud-0.3.1'
+local REVISION='sentry-hud-0.3.2'
 local existing=rawget(_G,'SentryHUD')
 if existing then return existing end
 local state={revision=REVISION,status='starting'}

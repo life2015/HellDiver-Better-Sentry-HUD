@@ -25,7 +25,7 @@ print('PASS: optional menu discovery; cfg migration; saved values; APPLY semanti
 mom=ROOT.parent/'EnemyHPHud/research/vendor/ModOptionsMenu/src'
 l.execute((ROOT/'tests/settings_language.lua').read_text())(module('settings'),module('config'),
  l.execute((mom/'bingus_text.lua').read_text()),(mom/'options.lua').read_text(),(mom/'api.lua').read_text())
-print('PASS: real Mod Options Menu API/UTF-8/refresh; Chinese text-language detection; all 15 labels/descriptions and layout choices; English fallback; stable category and saved values')
+print('PASS: real Mod Options Menu API/UTF-8/refresh; Chinese text-language detection; all 16 labels/descriptions and layout choices; English fallback; stable category and saved values')
 l.execute((ROOT/'tests/layouts.lua').read_text())(engine,module('presentation'),module('config'),module('icons'),module('controller'),module('model'))
 print('PASS: screen-right layout at 5 resolutions x 3 scales; vertical centering/offsets; map hiding; right accent; runtime layout switching; disable/enable; menu hiding')
 icon_samples=l.execute((ROOT/'tests/icons.lua').read_text())(engine,module('presentation'),module('config'),module('icons'),module('catalog'),module('model'))
